@@ -1,14 +1,38 @@
 ﻿using System;
-using System.Threading;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace CyberSecurityChatBot
 {
-    class DisplayService
+    public class DisplayService
     {
-        public void DisplayAsciiArt()
+        private TextBox outputTextBox;
+
+        // Attach the WPF TextBox control for output
+        public void AttachOutput(TextBox textBox)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(@" __    _____      _                                        _ _          
+            outputTextBox = textBox;
+            outputTextBox.Text = ""; // clear on attach
+        }
+
+        // Helper to append text safely on UI thread
+        private void AppendText(string text)
+        {
+            if (outputTextBox == null) return;
+
+            outputTextBox.Dispatcher.Invoke(() =>
+            {
+                outputTextBox.AppendText(text + Environment.NewLine);
+                outputTextBox.ScrollToEnd();
+            });
+        }
+
+        // Show ASCII Art (cyan color simulation with prefix)
+        public void ShowAsciiArt()
+        {
+            string asciiArt = @"
+ __    _____      _                                        _ _          
  \ \  / ____|    | |                                      (_) |         
   \ \| |    _   _| |__   ___ _ __ ___  ___  ___ _   _ _ __ _| |_ _   _  
    > > |   | | | | '_ \ / _ \ '__/ __|/ _ \/ __| | | | '__| | __| | | | 
@@ -24,68 +48,60 @@ namespace CyberSecurityChatBot
    > >  _ < / _ \| __|                                                  
   / /| |_) | (_) | |_                                                   
  /_/ |____/ \___/ \__|                                                  
-                                           ");
-            Console.ResetColor();
+                                           ";
+
+            AppendText("[AsciiArt - Cyan]\n" + asciiArt + "\n[/AsciiArt]");
         }
 
-        public void TypeText(string text, int delay = 50)
+        // Show welcome message boxed with border lines
+        public void ShowWelcome(string name)
         {
-            foreach (char c in text)
-            {
-                Console.Write(c);
-                Thread.Sleep(delay);
-            }
-            Console.WriteLine();
-        }
+            string welcomeMessage = $"Hello, {name}! I'm your Cybersecurity Awareness bot.";
+            string learnMessage = "What would you like to learn about?";
 
-        public void DisplayWelcomeMessage(string name)
-        {
-            string welcomeMessage = $" Hello, {name}! I'm your Cybersecurity Awareness bot.";
-            string learnMessage = " What would you like to learn about?";
+            int width = Math.Max(welcomeMessage.Length, learnMessage.Length) + 4;
 
-            int boxWidth = Math.Max(welcomeMessage.Length, learnMessage.Length) + 4;
-            string border = new string('═', boxWidth);
-
-            Console.ForegroundColor = ConsoleColor.DarkCyan;
-            Console.WriteLine($"╔{border}╗");
-            TypeText($"║ {welcomeMessage.PadRight(boxWidth - 2)} ║");
-            TypeText($"║ {learnMessage.PadRight(boxWidth - 2)} ║");
-            Console.WriteLine($"╚{border}╝");
-            Console.ResetColor();
-            Console.WriteLine();
-        }
-
-        public void DisplayGoodbyeMessage(string userName)
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-            TypeText($"Thank you for chatting, {userName}! Come Back Soon! :)");
-            Console.ResetColor();
-        }
-
-        public void DisplayInvalidChoiceMessage()
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            TypeText("I'm not sure I understand. Can you try rephrasing by typing a valid topic (e.g., phishing, password safety, suspicious links).");
-            Console.ResetColor();
-        }
-
-        public void DisplayTipsWithBox(string[] lines, ConsoleColor borderColor)
-        {
-            int width = 0;
-            foreach (string line in lines)
-                if (line.Length > width) width = line.Length;
-
-            width += 4;
             string border = new string('═', width);
 
-            Console.ForegroundColor = borderColor;
-            Console.WriteLine($"╔{border}╗");
-            foreach (string line in lines)
+            AppendText($"╔{border}╗");
+            AppendText($"║ {welcomeMessage.PadRight(width - 2)} ║");
+            AppendText($"║ {learnMessage.PadRight(width - 2)} ║");
+            AppendText($"╚{border}╝");
+            AppendText("");
+        }
+
+        // Show a message from bot in a distinct style (prefix)
+        public void ShowBotMessage(string message)
+        {
+            AppendText($"[Bot]: {message}");
+        }
+
+        // Show a message from user in a distinct style (prefix)
+        public void ShowUserMessage(string message)
+        {
+            AppendText($"[You]: {message}");
+        }
+
+        // Display boxed text lines with a "border" using ASCII chars
+        public void ShowBox(string[] lines, Brush borderColor)
+        {
+            if (lines == null || lines.Length == 0) return;
+
+            int width = 0;
+            foreach (var line in lines)
+                if (line.Length > width) width = line.Length;
+
+            width += 4; // padding
+
+            string border = new string('═', width);
+
+            AppendText($"╔{border}╗");
+            foreach (var line in lines)
             {
-                Console.WriteLine($"║ {line.PadRight(width - 2)} ║");
+                AppendText($"║ {line.PadRight(width - 2)} ║");
             }
-            Console.WriteLine($"╚{border}╝\n");
-            Console.ResetColor();
+            AppendText($"╚{border}╝");
+            AppendText("");
         }
     }
 }

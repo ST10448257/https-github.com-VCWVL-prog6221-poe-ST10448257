@@ -1,76 +1,102 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace CyberSecurityChatBot
 {
-    // QuestionService class: Handles asking and answering predefined questions
-    class QuestionService
+    // Model representing a quiz question
+    public class QuizQuestion
     {
-        // Dictionary to hold keywords and their responses
-        private readonly Dictionary<string, string> _keywordResponses = new Dictionary<string, string>
+        public string QuestionText { get; set; }
+        public ObservableCollection<string> Choices { get; set; }
+        public int CorrectAnswerIndex { get; set; }
+
+        public QuizQuestion(string questionText, IEnumerable<string> choices, int correctAnswerIndex)
         {
-            { "password", "Make sure to use strong, unique passwords for each account. Avoid using personal details in your passwords." },
-            { "scam", "Be cautious of unsolicited messages or emails that ask for personal information. Always verify the source before clicking on links." },
-            { "privacy", "Protect your privacy by adjusting your social media settings and being mindful of the information you share online." }
+            QuestionText = questionText;
+            Choices = new ObservableCollection<string>(choices);
+            CorrectAnswerIndex = correctAnswerIndex;
+        }
+    }
+
+    // Static service class to provide quiz questions
+    public static class CybersecurityQuestions
+    {
+        private static readonly List<QuizQuestion> AllQuestions = new()
+        {
+            new QuizQuestion(
+                "What is phishing?",
+                new List<string> {
+                    "A legitimate email from your bank",
+                    "A type of scam pretending to be a trustworthy entity",
+                    "A firewall setting",
+                    "A password manager feature"
+                },
+                1
+            ),
+
+            new QuizQuestion(
+                "What is a strong password?",
+                new List<string> {
+                    "Your birthdate",
+                    "Password123",
+                    "A long combination of letters, numbers, and symbols",
+                    "The word 'password'"
+                },
+                2
+            ),
+
+            new QuizQuestion(
+                "What should you do before clicking on a link in an email?",
+                new List<string> {
+                    "Click immediately",
+                    "Hover to check the URL and verify the sender",
+                    "Reply asking for confirmation",
+                    "Ignore all emails"
+                },
+                1
+            ),
+
+            new QuizQuestion(
+                "Which of the following helps protect your online privacy?",
+                new List<string> {
+                    "Sharing passwords",
+                    "Using public Wi-Fi without VPN",
+                    "Limiting personal info shared on social media",
+                    "Clicking on all links"
+                },
+                2
+            ),
+
+            new QuizQuestion(
+                "What is multi-factor authentication?",
+                new List<string> {
+                    "Using one password",
+                    "Using a password and an additional verification method",
+                    "Logging in without a password",
+                    "Sharing passwords with friends"
+                },
+                1
+            ),
+
+            // Add more questions as needed
         };
 
-        // AskPredefinedQuestions method: Asks the user predefined questions and provides answers
-        public void AskPredefinedQuestions(string userName)
+        // Return a randomized quiz set of up to numberOfQuestions
+        public static ObservableCollection<QuizQuestion> GetQuizSet(int numberOfQuestions)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\nHello {userName}! How are you today?");
-            Console.ResetColor();
+            var rnd = new Random();
+            var shuffled = new List<QuizQuestion>(AllQuestions);
 
-            Console.Write("Type a response (or just press Enter to skip): ");
-            string response = Console.ReadLine().Trim();
-
-            if (string.IsNullOrEmpty(response))
+            for (int i = 0; i < shuffled.Count; i++)
             {
-                Console.WriteLine("\nOkay! Let's move on.");
-            }
-            else
-            {
-                Console.WriteLine("\nThat's great to hear! I'm here to help with any cybersecurity questions you may have.");
+                int swapIndex = rnd.Next(i, shuffled.Count);
+                (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
             }
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\nBefore we begin {userName}, you can ask me about cybersecurity topics like password safety, scams, or privacy.");
-            Console.WriteLine("Or just press Enter to skip.\n");
-            Console.ResetColor();
+            var selected = shuffled.GetRange(0, Math.Min(numberOfQuestions, shuffled.Count));
 
-            Console.Write("Ask me a question: ");
-            string question = Console.ReadLine().Trim().ToLower();
-
-            if (string.IsNullOrEmpty(question))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("\nOkay! Let's jump straight into it!");
-                Console.ResetColor();
-                return;
-            }
-
-            // Check for keywords in the user's question
-            bool keywordFound = false;
-
-            foreach (var keyword in _keywordResponses.Keys)
-            {
-                if (question.Contains(keyword))
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine(_keywordResponses[keyword]);
-                    Console.ResetColor();
-                    keywordFound = true;
-                    return; // Exit after responding to first matched keyword
-                }
-            }
-
-            // Default response if no keywords matched
-            if (!keywordFound)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Hmm... I can only provide information on password safety, scams, and privacy for now. Sorry {userName} :(");
-                Console.ResetColor();
-            }
+            return new ObservableCollection<QuizQuestion>(selected);
         }
     }
 }
