@@ -1,9 +1,9 @@
-﻿using System;
-using System.Media;
+﻿using System.Media;
+using System.Windows;
 
 namespace CyberSecurityChatBot
 {
-    class GreetingService
+    public class GreetingService
     {
         public void PlayWelcomeSound()
         {
@@ -14,14 +14,8 @@ namespace CyberSecurityChatBot
             }
             catch
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Voice greeting not found. Add 'welcome.wav' to your project folder.");
-                Console.ResetColor();
+                MessageBox.Show("Voice greeting not found. Add 'welcome.wav' to your project folder.", "Missing Sound", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }
 }
-
-
-
-

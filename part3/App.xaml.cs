@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace part3
+namespace CyberSecurityChatBot
 {
     public partial class App : Application
     {

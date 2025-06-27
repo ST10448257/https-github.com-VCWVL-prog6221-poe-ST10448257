@@ -4,32 +4,16 @@
     {
         public string GetResponse(string input)
         {
-            input = input.ToLower();
-
-            if (input.Contains("phishing"))
+            string lower = input.ToLower();
+            return lower switch
             {
-                return "Phishing is a type of scam where attackers impersonate legitimate institutions via email or messages.";
-            }
-            else if (input.Contains("password"))
-            {
-                return "Use strong, unique passwords and consider using a password manager for safety.";
-            }
-            else if (input.Contains("suspicious links"))
-            {
-                return "Never click on links you don’t recognize. Hover over them to see where they lead.";
-            }
-            else if (input.Contains("privacy"))
-            {
-                return "Protect your privacy by limiting personal info shared online and adjusting privacy settings.";
-            }
-            else if (input == "exit")
-            {
-                return "Goodbye! Stay safe online.";
-            }
-            else
-            {
-                return "I'm sorry, I can help with phishing, password safety, suspicious links, or privacy.";
-            }
+                "phishing" => "Phishing is a method attackers use to trick you into giving up personal information.",
+                "password safety" => "Use strong, unique passwords and consider using a password manager.",
+                "suspicious links" => "Avoid clicking on suspicious links. Hover to preview the URL first.",
+                "privacy settings" => "Review privacy settings regularly on your apps and social platforms.",
+                "firewalls" => "Firewalls help block unauthorized access to your computer or network.",
+                _ => "Sorry, I don't understand that. Please type a known topic or command like 'quiz'."
+            };
         }
     }
 }

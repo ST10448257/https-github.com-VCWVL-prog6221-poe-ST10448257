@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -7,277 +9,243 @@ namespace CyberSecurityChatBot
 {
     public partial class MainWindow : Window
     {
-        private DisplayService displayService;
-        private ResponseService responseService;
+        // Quiz state variables
+        private List<QuizQuestion> _quizQuestions;
+        private QuizQuestion _currentQuizQuestion;
+        private int _quizScore = 0;
+        private int _currentQuestionIndex = 0;
+        private bool _quizInProgress = false;
 
-        private string userName = "Guest";
-        private bool isAskingName = true;
-        private bool quizActive = false;
-        private int quizIndex = 0;
-        private int quizScore = 0;
-        private QuizQuestion[] quizQuestions;
-        private bool waitingForTopic = false;
-        private bool postQuizPrompt = false;
+        // Services
+        private readonly TopicService _topicService = new TopicService();
+        private readonly DisplayService _displayService = new DisplayService();
+        private readonly ResponseService _responseService = new ResponseService();
+        private readonly GreetingService _greetingService = new GreetingService();
 
         public MainWindow()
         {
             InitializeComponent();
-
-            displayService = new DisplayService();
-            responseService = new ResponseService();
-
-            displayService.AttachOutput(OutputTextBox); // Connect DisplayService to TextBox
-
-            displayService.ShowAsciiArt();
-            displayService.ShowWelcome(userName);
+            _displayService.AttachOutput(TipsOutputContentBlock);
+            _greetingService.PlayWelcomeSound();
         }
 
-        private void SendButton_Click(object sender, RoutedEventArgs e)
+        #region Quiz Game Methods
+
+        private void CyberSecurityQuestionsButton_Click(object sender, RoutedEventArgs e)
         {
-            ProcessUserInput();
+            if (!_quizInProgress)
+            {
+                StartNewQuiz();
+                CyberSecurityQuestionsButton.Content = "End Quiz";
+            }
+            else
+            {
+                EndQuiz();
+                CyberSecurityQuestionsButton.Content = "Start Quiz";
+            }
         }
 
-        private void InputTextBox_KeyDown(object sender, KeyEventArgs e)
+        private void StartNewQuiz()
+        {
+            _quizQuestions = CybersecurityQuestions.GetQuizSet();
+            _quizScore = 0;
+            _currentQuestionIndex = 0;
+            _quizInProgress = true;
+
+            ScorePanel.Visibility = Visibility.Visible;
+            UpdateScoreDisplay();
+
+            _currentQuizQuestion = _quizQuestions[_currentQuestionIndex];
+            ShowQuestion(_currentQuizQuestion);
+        }
+
+        private void ShowQuestion(QuizQuestion question)
+        {
+            TipsOutputTitleBlock.Text = $"Question {_currentQuestionIndex + 1}/{_quizQuestions.Count}";
+            TipsOutputContentBlock.Text = question.Question;
+
+            QuizAnswersPanel.Children.Clear();
+            QuizAnswersPanel.Visibility = Visibility.Visible;
+
+            for (int i = 0; i < question.Options.Length; i++)
+            {
+                var radioButton = new RadioButton
+                {
+                    Content = $"{Convert.ToChar('A' + i)}) {question.Options[i]}",
+                    Tag = i,
+                    Style = (Style)FindResource("QuizAnswerRadioButton"),
+                    Margin = new Thickness(5),
+                    FontSize = 14
+                };
+                QuizAnswersPanel.Children.Add(radioButton);
+            }
+
+            UserFeedback.Text = "Select your answer and press Submit";
+            SubmitAnswerButton.IsEnabled = true;
+            SubmitAnswerButton.Visibility = Visibility.Visible;
+        }
+
+        private void SubmitAnswerButton_Click(object sender, RoutedEventArgs e)
+        {
+            int selectedIndex = -1;
+            foreach (RadioButton rb in QuizAnswersPanel.Children)
+            {
+                if (rb.IsChecked == true)
+                {
+                    selectedIndex = (int)rb.Tag;
+                    break;
+                }
+            }
+
+            if (selectedIndex == -1)
+            {
+                UserFeedback.Text = "Please select an answer!";
+                return;
+            }
+
+            EvaluateAnswer(selectedIndex);
+        }
+
+        private void EvaluateAnswer(int selectedIndex)
+        {
+            bool isCorrect = selectedIndex == _currentQuizQuestion.CorrectOptionIndex;
+
+            if (isCorrect)
+            {
+                _quizScore++;
+                UserFeedback.Text = $"✅ Correct! {_currentQuizQuestion.Explanation}";
+            }
+            else
+            {
+                UserFeedback.Text = $"❌ Incorrect. The correct answer is: {_currentQuizQuestion.GetCorrectAnswerLetter()}) {_currentQuizQuestion.GetCorrectAnswerText()}\n\n{_currentQuizQuestion.Explanation}";
+            }
+
+            UpdateScoreDisplay();
+            SubmitAnswerButton.IsEnabled = false;
+
+            // Move to next question or end quiz
+            _currentQuestionIndex++;
+            if (_currentQuestionIndex < _quizQuestions.Count)
+            {
+                _currentQuizQuestion = _quizQuestions[_currentQuestionIndex];
+                ShowQuestion(_currentQuizQuestion);
+            }
+            else
+            {
+                EndQuiz();
+            }
+        }
+
+        private void UpdateScoreDisplay()
+        {
+            ScoreTextBlock.Text = $"{_quizScore}/{_quizQuestions.Count}";
+        }
+
+        private void EndQuiz()
+        {
+            double percentage = (double)_quizScore / _quizQuestions.Count;
+            string feedback;
+
+            if (percentage >= 0.9) feedback = "Excellent! You're a cybersecurity expert!";
+            else if (percentage >= 0.7) feedback = "Great job! You're knowledgeable about cybersecurity.";
+            else if (percentage >= 0.5) feedback = "Good effort! You have some cybersecurity knowledge.";
+            else feedback = "Keep learning! Cybersecurity is important for staying safe online.";
+
+            TipsOutputTitleBlock.Text = "Quiz Complete!";
+            TipsOutputContentBlock.Text = $"{feedback}\n\nYour final score: {_quizScore}/{_quizQuestions.Count}";
+            QuizAnswersPanel.Visibility = Visibility.Collapsed;
+            SubmitAnswerButton.Visibility = Visibility.Collapsed;
+            _quizInProgress = false;
+        }
+
+        #endregion
+
+        #region Existing Features
+
+        private void QuickTipsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var random = new Random();
+            int tipType = random.Next(4);
+
+            switch (tipType)
+            {
+                case 0:
+                    _topicService.ShowPhishingTip(TipsOutputTitleBlock, TipsOutputContentBlock);
+                    break;
+                case 1:
+                    _topicService.ShowPasswordTip(TipsOutputTitleBlock, TipsOutputContentBlock);
+                    break;
+                case 2:
+                    _topicService.ShowSuspiciousLinkTip(TipsOutputTitleBlock, TipsOutputContentBlock);
+                    break;
+                case 3:
+                    _topicService.ShowPrivacyTip(TipsOutputTitleBlock, TipsOutputContentBlock);
+                    break;
+            }
+
+            UserFeedback.Text = "";
+        }
+
+        private void AskButton_Click(object sender, RoutedEventArgs e)
+        {
+            string userInput = UserInputTextBox.Text.Trim();
+            if (!string.IsNullOrEmpty(userInput))
+            {
+                if (_quizInProgress)
+                {
+                    UserFeedback.Text = "Please use the quiz controls to answer questions.";
+                    return;
+                }
+
+                string response = _responseService.GetResponse(userInput);
+                _displayService.ShowUserMessage(userInput);
+                _displayService.ShowBotMessage(response);
+                UserInputTextBox.Text = "";
+            }
+        }
+
+        private void UserInputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                ProcessUserInput();
-                e.Handled = true;
+                AskButton_Click(sender, e);
             }
         }
 
-        private void ProcessUserInput()
+        private void UserInputTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
-            string input = InputTextBox.Text.Trim();
-            if (string.IsNullOrEmpty(input)) return;
-
-            AddUserMessage(input);
-            InputTextBox.Clear();
-
-            if (isAskingName)
+            if (UserInputTextBox.Text == "Type your message here...")
             {
-                // Set user name (simple validation example)
-                if (input.Length < 2)
-                {
-                    AddBotMessage("Please enter a valid name with at least 2 characters.");
-                    return;
-                }
-                userName = input;
-                isAskingName = false;
-                AddBotMessage($"🎉 Welcome {userName}! Would you like to learn about cybersecurity topics? (yes/no)");
-                return;
+                UserInputTextBox.Text = "";
             }
-
-            string lowInput = input.ToLower();
-
-            if (quizActive)
-            {
-                HandleQuizAnswer(input);
-                return;
-            }
-
-            if (lowInput == "quiz")
-            {
-                StartQuiz();
-                return;
-            }
-
-            if (lowInput == "menu")
-            {
-                ShowMenu();
-                return;
-            }
-
-            if (postQuizPrompt)
-            {
-                postQuizPrompt = false;
-                if (lowInput == "yes" || lowInput == "y")
-                {
-                    ShowMenu();
-                    return;
-                }
-                else
-                {
-                    AddBotMessage("Alright! You can always type 'menu' or a topic name later.");
-                    return;
-                }
-            }
-
-            if (waitingForTopic)
-            {
-                HandleTopicRequest(input);
-                return;
-            }
-
-            if (lowInput == "yes" || lowInput == "y")
-            {
-                AddBotMessage("Great! Please type the cybersecurity topic you want to learn about (e.g., phishing, firewalls):");
-                waitingForTopic = true;
-                return;
-            }
-            else if (lowInput == "no" || lowInput == "n")
-            {
-                AddBotMessage("Okay! You can always type 'quiz' to start the cybersecurity quiz or 'menu' to see topic list.");
-                return;
-            }
-
-            // Default fallback response
-            string response = responseService.GetResponse(input);
-            AddBotMessage(response);
         }
 
-        // ==== Helper Methods ====
-
-        private void AddBotMessage(string message)
+        private void AddTaskButton_Click(object sender, RoutedEventArgs e)
         {
-            displayService.ShowBotMessage(message);
-        }
-
-        private void AddUserMessage(string message)
-        {
-            displayService.ShowUserMessage(message);
-        }
-
-        private void ShowMenu()
-        {
-            displayService.ShowAsciiArt();
-
-            string[] topics = new string[]
+            string taskText = TaskInputTextBox.Text.Trim();
+            if (!string.IsNullOrEmpty(taskText))
             {
-                "1. Phishing",
-                "2. Password Safety",
-                "3. Suspicious Links",
-                "4. Privacy Settings",
-                "5. Firewalls"
-            };
-
-            displayService.ShowBox(topics, Brushes.DarkCyan);
-            AddBotMessage("Please select a topic to learn more by typing its name or number.");
-            waitingForTopic = true;
-        }
-
-        // ==== Quiz logic ====
-
-        private void StartQuiz()
-        {
-            quizQuestions = CybersecurityQuestions.GetQuizSet(); // See below for example
-            quizIndex = 0;
-            quizScore = 0;
-            quizActive = true;
-            waitingForTopic = false;
-            postQuizPrompt = false;
-
-            AddBotMessage("🧠 Starting the Cybersecurity Quiz! Let's begin:");
-            AskQuizQuestion();
-        }
-
-        private void AskQuizQuestion()
-        {
-            if (quizIndex < quizQuestions.Length)
-            {
-                AddBotMessage($"Q{quizIndex + 1}: {quizQuestions[quizIndex].Question}");
-                for (int i = 0; i < quizQuestions[quizIndex].Options.Length; i++)
+                TaskListBox.Items.Add(new ListBoxItem
                 {
-                    AddBotMessage($"{i + 1}. {quizQuestions[quizIndex].Options[i]}");
-                }
-            }
-            else
-            {
-                quizActive = false;
-                AddBotMessage($"Quiz completed! Your score: {quizScore} / {quizQuestions.Length}");
-                AddBotMessage("Would you like to learn more? (yes/no)");
-                postQuizPrompt = true;
+                    Content = taskText,
+                    Foreground = Brushes.White,
+                    Background = Brushes.Transparent
+                });
+                TaskInputTextBox.Text = "";
             }
         }
 
-        private void HandleQuizAnswer(string input)
+        #endregion
+
+        #region Helper Methods
+
+        private void ShowWelcomeMessage(string userName)
         {
-            if (int.TryParse(input, out int answer))
-            {
-                int correct = quizQuestions[quizIndex].CorrectOptionIndex + 1;
-                if (answer == correct)
-                {
-                    AddBotMessage("Correct! 🎉");
-                    quizScore++;
-                }
-                else
-                {
-                    AddBotMessage($"Incorrect. The correct answer was: {correct}. {quizQuestions[quizIndex].Options[quizQuestions[quizIndex].CorrectOptionIndex]}");
-                }
-                quizIndex++;
-                AskQuizQuestion();
-            }
-            else
-            {
-                AddBotMessage("Please answer with the number corresponding to your choice.");
-            }
+            _displayService.ShowWelcome(userName);
+            _displayService.ShowAsciiArt();
+            _displayService.ShowBotMessage("Type any cybersecurity topic or click 'Quick Tips' for advice. Try 'phishing' or 'password safety' to start!");
         }
 
-        // ==== Topic handling ====
-
-        private void HandleTopicRequest(string input)
-        {
-            string lowInput = input.ToLower();
-            waitingForTopic = false;
-
-            string response = responseService.GetResponse(lowInput);
-            AddBotMessage(response);
-        }
-    }
-
-    // ==== Helper classes ====
-
-    public class QuizQuestion
-    {
-        public string Question { get; set; }
-        public string[] Options { get; set; }
-        public int CorrectOptionIndex { get; set; }
-    }
-
-    public static class CybersecurityQuestions
-    {
-        public static QuizQuestion[] GetQuizSet()
-        {
-            return new QuizQuestion[]
-            {
-                new QuizQuestion
-                {
-                    Question = "What is phishing?",
-                    Options = new string[]
-                    {
-                        "A type of malware",
-                        "A social engineering attack to steal information",
-                        "A firewall technique",
-                        "An antivirus software"
-                    },
-                    CorrectOptionIndex = 1
-                },
-                new QuizQuestion
-                {
-                    Question = "Which of these is a strong password?",
-                    Options = new string[]
-                    {
-                        "123456",
-                        "password",
-                        "P@ssw0rd!2025",
-                        "qwerty"
-                    },
-                    CorrectOptionIndex = 2
-                },
-                new QuizQuestion
-                {
-                    Question = "What should you do when you see a suspicious link?",
-                    Options = new string[]
-                    {
-                        "Click it immediately",
-                        "Hover over it to check destination before clicking",
-                        "Share it with friends",
-                        "Ignore and delete the message"
-                    },
-                    CorrectOptionIndex = 1
-                },
-                // Add more questions as needed
-            };
-        }
+        #endregion
     }
 }

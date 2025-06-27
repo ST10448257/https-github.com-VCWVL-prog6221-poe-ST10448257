@@ -20,7 +20,7 @@ namespace CyberSecurityChatBot
     }
 
     // Static service class to provide quiz questions
-    public static class CybersecurityQuestions
+    public static class CybersecurityQuestion
     {
         private static readonly List<QuizQuestion> AllQuestions = new()
         {
@@ -34,7 +34,6 @@ namespace CyberSecurityChatBot
                 },
                 1
             ),
-
             new QuizQuestion(
                 "What is a strong password?",
                 new List<string> {
@@ -45,7 +44,6 @@ namespace CyberSecurityChatBot
                 },
                 2
             ),
-
             new QuizQuestion(
                 "What should you do before clicking on a link in an email?",
                 new List<string> {
@@ -56,7 +54,6 @@ namespace CyberSecurityChatBot
                 },
                 1
             ),
-
             new QuizQuestion(
                 "Which of the following helps protect your online privacy?",
                 new List<string> {
@@ -67,7 +64,6 @@ namespace CyberSecurityChatBot
                 },
                 2
             ),
-
             new QuizQuestion(
                 "What is multi-factor authentication?",
                 new List<string> {
@@ -78,7 +74,6 @@ namespace CyberSecurityChatBot
                 },
                 1
             ),
-
             // Add more questions as needed
         };
 
@@ -95,7 +90,6 @@ namespace CyberSecurityChatBot
             }
 
             var selected = shuffled.GetRange(0, Math.Min(numberOfQuestions, shuffled.Count));
-
             return new ObservableCollection<QuizQuestion>(selected);
         }
     }
